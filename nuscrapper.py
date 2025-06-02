@@ -1,37 +1,40 @@
-from selenium import webdriver # allow launching browser
-from selenium.webdriver.common.by import By # allow search with parameters
-from selenium.webdriver.support.ui import WebDriverWait # allow waiting for page to load
-from selenium.webdriver.support import expected_conditions as EC # determine whether the web page has loaded
-from selenium.common.exceptions import TimeoutException # handling timeout situation
+import asyncio
+from playwright.async_api import async_playwright
+from playwright_stealth import stealth_async
+import pandas as pd
+import random
+import time
 
-# to open new window
-# driver_option = webdriver.ChromeOptions()
-# driver_option.add_argument(" — incognito")
-# chromedriver_path = '/usr/bin/chromedriver' # Change this to your own chromedriver path!
-# def create_webdriver():
-#  return webdriver.Chrome(executable_path=chromedriver_path, chrome_options=driver_option)
+# told me to delay to make me look human
+async def random_delay(page, min=1, max=5):
+    delay = random.uniform(min, max)
+    await page.wait_for_timeout(delay * 1000)
 
- # Open the website
-browser = webdriver.Chrome()
-browser.get("https://www.novelupdates.com/series-finder/?sf=1&org=495,496,497&sort=sdate&order=desc")
+async def scrapper():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36"
+        )
+        page = await context.new_page()
 
-# Extract all novels
-novels = browser.find_elements_by_xpath("/html/body/div[1]/div[3]/div/div/div[1]/div[1]/div/div[4]/div[2]/div[1]/a")
+        await stealth_async(page)
 
-# Extract titles for each novel
-novel_list = []
-for novel in novels:
- novel_name = novel.text # novel name
- novel_list.append(novel_name)
+        url = "https://www.novelupdates.com/series-finder/?sf=1&org=495,496,497&sort=sdate&order=desc"
+        print("Opening website")
+        await page.goto(url)
 
-# Close connection
-browser.quit()
+        try:
+            await page.wait_for_selector(".search_main_box_nu", timeout=10000)
+            await random_delay(page)
 
-# Saving data
-title_df = pd.DataFrame.from_dict(novel_list, orient = 'index')
-title_df.columns = ['novel_name']
-title_df = title_df.reset_index(drop=True)
+            novels = await page.query_selector_all(".search_main_box_nu")
+            print(f"Found {len(novels)} novels.")
 
-# /html/body/div[1]/div[2]/div/div/div[1]/table[1]/tbody/tr[2]/td[1]/a
+            results = []
 
-# /html/body/div[1]/div[3]/div/div/div[1]/div[1]/div/div[4]/div[2]/div[1]/a
+            print(novels[:10])
+        except Exception as e:
+            print(f"Error: {e} probably got found? maybe should use proxy from the start")
+
+asyncio.run(scrapper())
