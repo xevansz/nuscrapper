@@ -112,9 +112,9 @@ def scrape_novels(pageNo):
 def main():
     import pandas as pd
     results = []
-    pageNo = 870
+    pageNo = 1
 
-    while True:
+    while pageNo<=100:
         novels = scrape_novels(pageNo)
         if not novels:
             print(f"Stopping at page {pageNo}")
@@ -123,7 +123,7 @@ def main():
         results.extend(novels)
 
         try:
-            pd.DataFrame(results).to_csv("Novelupdates_info3.csv", index=False, encoding='utf-8', quoting=1)
+            pd.DataFrame(results).to_csv("Novelupdates_info4.csv", index=False, encoding='utf-8', quoting=1)
             print(f"    Page {pageNo} Saveed yooo!!, total so far: {len(results)}")
         except Exception as e:
             print("C'mmon bro not this too: {e}")
